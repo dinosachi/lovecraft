@@ -130,6 +130,7 @@ function handleElderSign(game: Game) {
  */
 function handleCthulu(game: Game) {
   // If there's still a cthulhu out there, we need to keep going.
+  if (game.discards.find((card) => card === Card.CTHULHU)) return;
   for (const player of game.playerList) {
     for (const card of player.hand) {
       if (card === Card.CTHULHU) {
