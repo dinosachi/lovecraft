@@ -15,10 +15,10 @@
         <div *ngFor="let card of player.player.hand; trackBy: trackByIndex; index as i"
              class="play card"
              [@simpleFadeAnimation]="'in'"
-             [matTooltip]="tooltipForCard(card, player.player)"
+             [matTooltip]="tooltipForCard(player.player, i + 1, card)"
              (click)="clickCard(player.player, i + 1, $event)
       ">
-          <img [src]="imageForCard(player.player, card)">
+          <img [src]="imageForCard(player.player, i + 1, card)">
         </div>
       </div>
       <div class="cards">
@@ -46,9 +46,9 @@
       / {{status.elderSignsTotal}}</span>
     <span class="mirage-picked">Mirage picked: {{status.miragePicked ? 'Yes' : 'No'}}</span>
   </div>
-  <div *ngFor="let cardRound of (cardRounds | async); trackBy: trackByIndex;"
+  <div *ngFor="let cardRound of (cardRounds | async); trackBy: trackBy;"
        class="visible-cards-round">
-    <div *ngFor="let card of cardRound; trackBy: trackByIndex;" class="card"
+    <div *ngFor="let card of cardRound; trackBy: trackBy;" class="card"
          [@simpleFadeAnimation]="'in'"
          [matTooltip]="tooltipForVisibleCard(card)"
          (click)="magnifyCard($event)">
