@@ -25,7 +25,7 @@ export function onPlayCard(game: Game | undefined, action: PlayCard) {
   if (game.currentInvestigatorId !== action.sourcePlayer) {
     throw new Error(`${action.sourcePlayer} is not the current investigator.`);
   }
-  if (action.sourcePlayer === action.targetPlayer && action.) {
+  if (action.sourcePlayer === action.targetPlayer) {
     throw new Error('You cannot investigate yourself.');
   }
 
