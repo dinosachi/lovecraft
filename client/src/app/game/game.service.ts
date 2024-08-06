@@ -63,6 +63,10 @@ export class GameService {
     return from(this.gameFacade.investigate(gameId, this.username, target.id, cardIndex)).pipe(take(1), wrap);
   }
 
+  revealPrescient(gameId: GameId, target: Player, cardIndex: number) {
+    return from(this.gameFacade.revealPrescient(gameId, this.username, target.id, cardIndex)).pipe(take(1), wrap);
+  }
+
   restartGame(gameId: GameId) {
     return from(this.gameFacade.restartGame(gameId)).pipe(take(1), wrap);
   }
