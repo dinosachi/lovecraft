@@ -1,9 +1,9 @@
 import {Observable, Observer} from 'rxjs';
 import {take} from 'rxjs/operators';
 
-import {ForceGameState, JoinGame, NewGame, NextRound, PlayCard, RestartGame, SetInvestigator, StartGame, UpdateGameOptions} from '../actions/actions';
+import {ForceGameState, JoinGame, NewGame, NextRound, PlayCard, RestartGame, RevealCard, SetInvestigator, StartGame, UpdateGameOptions} from '../actions/actions';
 import {Game, GameId, GameOptions, PlayerId} from '../models/models';
-import {onPlayCard} from '../reducers/card_reducers';
+import {onPlayCard, onRevealCard} from '../reducers/card_reducers';
 import {onForceGameState, onJoinGame, onNewGame, onNextRound, onRestartGame, onSetInvestigator, onStartGame, onUpdateGameOptions} from '../reducers/game_reducers';
 
 import {GameStore} from './game_store';
