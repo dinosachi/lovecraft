@@ -8,6 +8,9 @@ export function onPlayCard(game: Game | undefined, action: PlayCard) {
   if (!game) {
     throw new Error(`No game ${action.gameId} exists.`);
   }
+  if (game.state == GameState.WAITING_PRESCIENT) {
+    throw new Error(`${game.id} is waiting for a prescient reveal.`);
+  }
   if (game.state !== GameState.IN_PROGRESS) {
     throw new Error(`${game.id} is not in progress.`);
   }
@@ -22,11 +25,46 @@ export function onPlayCard(game: Game | undefined, action: PlayCard) {
   if (game.currentInvestigatorId !== action.sourcePlayer) {
     throw new Error(`${action.sourcePlayer} is not the current investigator.`);
   }
-  if (action.sourcePlayer === action.targetPlayer) {
+  if (action.sourcePlayer === action.targetPlayer && action.) {
     throw new Error('You cannot investigate yourself.');
   }
 
   playCard(game, action.sourcePlayer, action.targetPlayer, action.cardNumber);
+
+  // Add the play to the history.
+  game.history.push(action);
+
+  return game;
+}
+
+/**
+ * Updates the store given a RevealCard action. (Prescient Vision)
+ * Expects the investigator to change after the RevealCard action.
+ * Source: https://boardgamegeek.com/thread/1706745/prescient-vision-flip-any-one-card-over
+ */
+export function onRevealCard(game: Game | undefined, action: RevealCard) {
+  if (!game) {
+    throw new Error(`No game ${action.gameId} exists.`);
+  }
+  if (game.state !== GameState.WAITING_PRESCIENT) {
+    throw new Error(`${game.id} is not waiting for a prescient reveal.`);
+  }
+  const targetPlayer = getPlayerOrDie(game, action.targetPlayer);
+  if (action.cardNumber < 1) {
+    throw new Error(`Card number must be >= 1.`);
+  }
+  if (action.cardNumber > targetPlayer.hand.length) {
+    throw new Error(
+        `${action.targetPlayer} only has ${targetPlayer.hand.length} cards`);
+  }
+  if (game.currentInvestigatorId !== action.sourcePlayer) {
+    throw new Error(`${action.sourcePlayer} is not the current investigator.`);
+  }
+  
+  // Randomize the revealed card. Adjust for cardNumber being 1 based instead of 0.
+  action.cardNumber = Math.floor(Math.random() * targetPlayer.hand.length) + 1;
+
+  revealCard(game, action.sourcePlayer, action.targetPlayer, action.cardNumber);
 
   // Add the play to the history.
   game.history.push(action);
@@ -44,9 +82,16 @@ function playCard(
     cardNumber: number) {
   // Find the player or die.
   const player = getPlayerOrDie(game, targetPlayerId);
+  const investigator = getPlayerOrDie(game, sourcePlayerId);
+
+  // Randomize the picked card if it is not revealed by Prescient Vision. 
+  // Adjust for cardNumber being 1 based instead of 0.
+  if (investigator.secrets.findIndex((secret) => secret.type == SecretType.CARD) !== cardIndex) {
+    cardNumber = Math.floor(Math.random() * targetPlayer.hand.length) + 1;
+  }
 
   // Card indexes are 0 based, but the card number is 1 based.
-  const cardIndex = cardNumber - 1;
+  const cardIndex = cardNumber - 1; 
   // Ignore attempts to play bogus cards.
   if (cardIndex < 0 || cardIndex >= player.hand.length) {
     return;
@@ -87,6 +132,8 @@ function playCard(
       const sourcePlayer = getPlayerOrDie(game, sourcePlayerId);
       handlePrivateEye(game, sourcePlayer, player);
       break;
+    case Card.PRESCIENT_VISION:
+      handlePrescientVision(game);
     default:
       throw new Error(`Invalid card type: ${card}`);
   }
@@ -96,12 +143,60 @@ function playCard(
 
   // If there's a paranoid investigator, give them the flashlight back if we
   // didn't end the round.
-  if (game.paranoidPlayerId && !roundEnded) {
+  // Let the target player with the Prescient card keep investigator status
+  // until they reveal a card.
+  else if (game.paranoidPlayerId && !roundEnded && game.state !== GameState.WAITING_PRESCIENT) {
     game.currentInvestigatorId = game.paranoidPlayerId;
   } else {
     game.currentInvestigatorId = targetPlayerId;
   }
 }
+
+/**
+ * Reveals a card from a target player's hand in the game provided, updating
+ * game state appropriately.
+ * Note: the game rules say the card should be hidden again, but it's too
+ * easy for players to miss, so the card stays revealed until the round ends.
+ */
+function revealCard(
+    game: Game, sourcePlayerId: PlayerId, targetPlayerId: PlayerId,
+    cardNumber: number) {
+  // Find the player or die.
+  const player = getPlayerOrDie(game, targetPlayerId);
+
+  // Card indexes are 0 based, but the card number is 1 based.
+  const cardIndex = cardNumber - 1;
+  // Ignore attempts to play bogus cards.
+  if (cardIndex < 0 || cardIndex >= player.hand.length) {
+    return;
+  }
+
+  secret = {
+    type: SecretType.CARD,
+    player: targetPlayerId,
+    card: player.hand[cardIndex],
+    cardNumber: cardNumber,
+  };
+  
+  // Reveal the card by adding it to everyone's secrets.
+  for (let player of game.playerList) {
+    player.secrets.push(secret);
+  }
+
+  // Allow the game to recognize the prescient reveal is over.
+  game.state = GameState.IN_PROGRESS;
+
+  // Handle an end-of-round situation.
+  const roundEnded = handlePotentialEndOfRound(game);
+
+  // If there's a paranoid investigator, give them the flashlight back if we
+  // didn't end the round.
+  if (game.paranoidPlayerId && !roundEnded) {
+    game.currentInvestigatorId = game.paranoidPlayerId;
+  }
+  // Otherwise, the player revealing with prescient stays the investigator.
+}
+
 
 /**
  * Handles someone playing a rock or some other no-op card.
@@ -191,6 +286,14 @@ function handlePrivateEye(game: Game, source: Player, target: Player) {
     player: target.id,
     role: target.role,
   });
+}
+
+/**
+ * The target player now reveals any card without playing it. 
+ * End of round is delayed if it is the last card.
+ */
+function handlePrescientVision(game: Game) {
+  game.state = GameState.WAITING_PRESCIENT;
 }
 
 /**
