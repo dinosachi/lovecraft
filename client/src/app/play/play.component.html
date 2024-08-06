@@ -46,9 +46,9 @@
       / {{status.elderSignsTotal}}</span>
     <span class="mirage-picked">Mirage picked: {{status.miragePicked ? 'Yes' : 'No'}}</span>
   </div>
-  <div *ngFor="let cardRound of (cardRounds | async); trackBy: trackBy;"
+  <div *ngFor="let cardRound of (cardRounds | async); trackBy: trackByIndex;"
        class="visible-cards-round">
-    <div *ngFor="let card of cardRound; trackBy: trackBy;" class="card"
+    <div *ngFor="let card of cardRound; trackBy: trackByIndex;" class="card"
          [@simpleFadeAnimation]="'in'"
          [matTooltip]="tooltipForVisibleCard(card)"
          (click)="magnifyCard($event)">
