@@ -1,5 +1,5 @@
 import {ForceGameState, JoinGame, NewGame, NextRound, RestartGame, SetInvestigator, StartGame, UpdateGameOptions} from '../actions/actions';
-import {Card, Game, GameOptions, GameState, getPlayerOrDie, Player, Role} from '../models/models';
+import {Card, Game, GameOptions, GameState, getPlayerOrDie, Player, Role, SecretTypes} from '../models/models';
 
 import {dealCardsToPlayers, shuffle} from './utilities';
 
@@ -213,6 +213,11 @@ function nextRound(game: Game) {
   // As well as any discards caused by things like evil presence.
   remainingCards.push(...game.discards);
   game.discards = [];
+  // Remove card secrets. There is only one (CardType.PRESCIENT_VISION).
+  for (const player of game.playerList) {
+    index = player.secrets.findIndex(secret => secret.type==SecretType.CARD);
+    player.secrets.splice(index, 1);
+  }
 
   // Now deal them back out.
   game.round++;
@@ -251,7 +256,7 @@ function generateInitialHands(
   // Add elder signs.
   addValues(cards, Card.ELDER_SIGN, setup.elderSigns);
 
-  // Add any special cards.
+  // Add any special cards and discard one randomly.
   const specials = [...SUPPORTED_SPECIAL_CARDS];
   shuffle(specials);
   cards.push(...specials.slice(0, options.specialCardCount));
@@ -306,7 +311,7 @@ export const PLAYER_SETUPS: Record<number, PlayerSetup> = {
  */
 export const SUPPORTED_SPECIAL_CARDS: Card[] = [
   Card.EVIL_PRESENCE, Card.INSANITYS_GRASP, Card.MIRAGE, Card.PARANOIA,
-  Card.PRIVATE_EYE
+  Card.PRIVATE_EYE, Card.PRESCIENT_VISION
 ];
 
 /**
