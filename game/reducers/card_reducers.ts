@@ -1,4 +1,4 @@
-import {PlayCard} from '../actions/actions';
+import {PlayCard, RevealCard} from '../actions/actions';
 import {Card, Game, GameState, getPlayerOrDie, Player, PlayerId, SecretType} from '../models/models';
 
 /**
