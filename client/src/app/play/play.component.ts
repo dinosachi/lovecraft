@@ -171,13 +171,25 @@ export class PlayComponent implements AfterViewInit {
     }
   }
 
-  clickCard(target: Player, cardIndex: number, event: MouseEvent): void {
+  clickCard(target: Player, cardNumber: number, event: MouseEvent): void {
+    // Note: Currently you cannot magnify your own cards if you are using Prescient Vision,
+    // nor can you magnify someone else's revealed card.
+    
+    if (this.game.value.state === GameState.WAITING_PRESCIENT) {
+      this.investigateStatus = loading();
+      this.gameService.revealCard(this.gameId, target, cardNumber).pipe(takeUntil(this.destroyed)).subscribe((val) => {
+        this.investigateStatus = val;
+        if (isError(val)) {
+          this.errorService.displayError('Error revealing', val.error);
+        }
+      }
+    }
     if (target.id === this.currentPlayer?.id) {
       this.magnifyCard(event);
       return;
     }
     this.investigateStatus = loading();
-    this.gameService.investigate(this.gameId, target, cardIndex).pipe(takeUntil(this.destroyed)).subscribe((val) => {
+    this.gameService.investigate(this.gameId, target, cardNumber).pipe(takeUntil(this.destroyed)).subscribe((val) => {
       this.investigateStatus = val;
       if (isError(val)) {
         this.errorService.displayError('Error investigating', val.error);
@@ -186,18 +198,27 @@ export class PlayComponent implements AfterViewInit {
   }
 
   /** Returns true if we can show the card to the current player. */
-  shouldShowCard(player?: Player): boolean {
-    return player?.id === this.currentPlayer?.id ||
-        (this.game.value.state !== GameState.IN_PROGRESS && this.game.value.state !== GameState.PAUSED);
-  }
-
-  private shouldShowRoleCard(player: Player): boolean {
-    if (this.shouldShowCard(player)) {
+  shouldShowCard(player?: Player, cardNumber?: number): boolean {
+    if (player?.id === this.currentPlayer?.id) return true;
+    if (this.game.value.state !== GameState.IN_PROGRESS && 
+        this.game.value.state !== GameState.PAUSED && 
+        this.game.value.state !== GameState.WAITING_PRESCIENT) {
       return true;
     }
-    return !!this.currentPlayer?.secrets.find((secret) =>
-        secret.player === player.id);
+    // Match your secrets against the specified card.
+    return !!this.currentPlayer?.secrets.find((secret) => 
+      secret.type === SecretType.CARD && 
+      secret.player == player?.id && 
+      secret.cardNumber = cardNumber);
+  }
 
+  /** Returns true if we can show the role card to the current player. */
+  private shouldShowRoleCard(player: Player): boolean {
+    if (player?.id === this.currentPlayer?.id) return true;
+    // Match your secrets against the specified player's role.
+    return !!this.currentPlayer?.secrets.find((secret) => 
+      secret.type === SecretType.ROLE && 
+      secret.player == player?.id);
   }
 
   tooltipForRole(role: Role, player: Player): string {
@@ -228,8 +249,8 @@ export class PlayComponent implements AfterViewInit {
     }
   }
 
-  tooltipForCard(card: Card, player?: Player): string {
-    if (!this.shouldShowCard(player)) {
+  tooltipForCard(player: Player, cardNumber: number, card: Card): string {
+    if (!this.shouldShowCard(player, cardNumber)) {
       return 'Unknown';
     }
     return this.tooltipForVisibleCard(card);
@@ -260,8 +281,8 @@ export class PlayComponent implements AfterViewInit {
     }
   }
 
-  imageForCard(player: Player, card: Card): string {
-    if (!this.shouldShowCard(player)) {
+  imageForCard(player: Player, card: Card, cardNumber: number): string {
+    if (!this.shouldShowCard(player, cardNumber)) {
       return CardImage.BACK;
     }
     return this.imageForVisibleCard(card);
