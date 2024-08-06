@@ -9,6 +9,7 @@ export enum ActionType {
   SET_INVESTIGATOR = '[Game] Set Investigator',
   FORCE_GAME_STATE = '[Game] Force State',
   PLAY_CARD = '[Card] Play Card',
+  REVEAL_CARD = '[Card] Reveal Card',
 }
 
 export interface Action extends HistoryEntry {
@@ -51,6 +52,13 @@ export class PlayCard implements Action {
   type = ActionType.PLAY_CARD;
   constructor(
       public gameId: GameId, public sourcePlayer: PlayerId,
+      public targetPlayer: PlayerId, public cardNumber: number) {}
+}
+
+export class RevealCard implements Action {
+  type = ActionType.REVEAL_CARD;
+  constructor(
+    public gameId: GameId, public sourcePlayer: PlayerId,
       public targetPlayer: PlayerId, public cardNumber: number) {}
 }
 
