@@ -74,6 +74,19 @@ export class GameFacade {
   }
 
   /**
+   * Causes a prescient reveal to occur.
+   */
+  revealPrescient(
+    gameId: GameId, sourcePlayerId: PlayerId, targetPlayerId: PlayerId,
+      cardNumber: number): Promise<void> {
+    return this.store.applyTo(gameId, (game: Game) => {
+      return onRevealCard(
+          game,
+          new PlayCard(gameId, sourcePlayerId, targetPlayerId, cardNumber));
+    });
+  }
+
+  /**
    * Restarts the game with the same player list. This resets all other game
    * state.
    */
